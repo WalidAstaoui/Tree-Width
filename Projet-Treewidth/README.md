@@ -1,4 +1,4 @@
-# Projet Treewidth
+# Treewidth Project
 
 In graph theory, the treewidth of an undirected graph is an integer number which specifies, informally, how far the graph is from being a tree.
 
