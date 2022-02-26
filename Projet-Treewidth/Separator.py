@@ -309,9 +309,8 @@ def min_separator(gr):
     return sep
 
 def is_clique(gr, bag):
-    X = bag.value
-    for u in X:
-        for v in X:
+    for u in bag:
+        for v in bag:
             if u < v and v not in gr[u]:
                 return False
     return True
@@ -326,46 +325,41 @@ def get_list_of_bags(t):
     return L
 
 def aux_graph(gr, t, bag):
-    X_ = set(bag.value)
-    
     aux = {}
-    for u in X_:
+    for u in bag:
         aux[u] = set()
     
-    bags = get_list_of_bags(t)
-    for bag in bags:
-        X = set(bag.value) & X_
-        if X == X_: continue
-        for u in X:
-            for v in X:
-                if u < v:
+    bags = t[bag]
+    for b in bags:
+        bb = b & bag
+        for u in bb:
+            for v in bb:
+                if u != v:
                     aux[u].add(v)
-                    aux[v].add(u)
     
-    for u in X_:
-            for v in X_:
-                if v in gr[u]:
-                    aux[u].add(v) 
+    for u in bag:
+        for v in bag:
+            if v in gr[u]:
+                aux[u].add(v) 
     
     return aux
 
 def refine(gr, t):
-    bag_x = Node([])
-    bags = get_list_of_bags(t)
-    for bag in bags:
-        if len(bag.value) > len(bag_x.value) and not is_clique(gr, bag)  :
+    bag_x = frozenset()
+    for bag in t:
+        if len(bag) > len(bag_x) and not is_clique(gr, bag):
             bag_x = bag
     
-    if bag_x.value == []:
+    if len(bag_x) == 0:
         print("Can t refine, bags are all cliques")
-        return
+        return False
     
     H = aux_graph(gr, t, bag_x)
-    S = min_separator(H)
+    S = frozenset(min_separator(H))
     
     if len(S) == 0:
         print("Can t refine, aux graph is clique")
-        return
+        return False
     
     H_S = eliminate_set(H, S)
     W = []
@@ -386,95 +380,84 @@ def refine(gr, t):
                 vis.add(v)
                 Q.append(v)
         
-        W.append(w)
+        W.append(frozenset(w))
     
-    T_X = [S | w for w in W]
-    T_bags = [Node(list(X_i)) for X_i in T_X]
-     
-    i_parent = -1
-    if bag_x.parent:
-        for i in range(len(T_X)):
-            bag_parent = bag_x.parent
-            if (set(bag_parent.value) & set(bag_x.value)).issubset(T_X[i]):      
-                bag_parent.delete_edge(bag_x)
-                T_bags[i].add_parent(bag_parent)
-                bag_x.add_parent(T_bags[i])
-                i_parent = i
-                break
+    T_bags = [S | w for w in W]
+    for t_bag in T_bags:
+        t[t_bag] = set()
             
+    adj_x = list(t[bag_x])
+    
+    for bag in adj_x:
+        t[bag_x].remove(bag)
+        t[bag].remove(bag_x)
+    
+    for bag in adj_x:    
+        for i in range(len(T_bags)):
+            if (bag & bag_x).issubset(T_bags[i]):
+                t[T_bags[i]].add(bag)
+                t[bag].add(T_bags[i])              
+                break   
             
-    adj_x = set(bag_x.children)
+    del t[bag_x]       
+    t[S] = set()
     
-    
-    for i in range(len(T_X)):
-        if i == i_parent: continue
-        for bag in adj_x:    
-            if (set(bag.value) & set(bag_x.value)).issubset(T_X[i]):
-                bag.delete_edge(bag_x)
-                T_bags[i].add_children([bag])                
-                break
-        bag_x.add_children([T_bags[i]])
-         
-    bag_x.value = list(S)
-    return
+    for i in range(len(T_bags)): 
+        t[S].add(T_bags[i])
+        t[T_bags[i]].add(S)
+        
+    return True
 
-             
-graph_2 = {'1': {'2', '4'}, '2': {'1', '5'}, '4': {'1', '5'}, '5': {'2', '4', '6', '9'}, '6': {'5', '9'},
+def tree_from_t(t):
+    root_bag = next(iter(t))
+    root_node = Node(list(root_bag))
+    
+    vis = set()
+    vis.add(root_bag)
+    Q = [(root_bag, root_node)]
+    
+    while Q != []:
+        bag, bag_node = Q.pop()
+        for v_bag in t[bag]:
+            if v_bag in vis: continue
+            vis.add(v_bag)
+            v_node = Node(list(v_bag))
+            v_node.add_parent(bag_node)
+            Q.append((v_bag, v_node))
+    
+    return Tree(root_node)
+
+def initial_t(gr):
+    return {frozenset(gr.keys()) : set()}
+
+def build_tree_decomposition_from_refining(gr):
+    t = initial_t(gr)
+    print(tree_from_t(t))
+    while(refine(gr, t)):
+        print(tree_from_t(t))
+        
+              
+graph_1 = {'1': {'2', '4'}, '2': {'1', '5'}, '4': {'1', '5'}, '5': {'2', '4', '6', '9'}, '6': {'5', '9'},
            '9': {'5', '6'}}
 
-node_569 = Node(['5','6','9'])
-node_1245 = Node(['1','2','4','5'])
-extras = [Node([x]) for x in node_1245.value]
+build_tree_decomposition_from_refining(graph_1)
 
-node_569.add_children([node_1245])
-#node_1245.add_children(extras)
+graph_2 = {}
+graph_2['1'] = {'4', '2'}
+graph_2['2'] = {'1', '3', '8'}
+graph_2['3'] = {'2', '6'}
+graph_2['4'] = {'7', '1'}
+graph_2['6'] = {'9', '3'}
+graph_2['7'] = {'4', '8'}
+graph_2['8'] = {'7', '9', '2'}
+graph_2['9'] = {'8', '6'}
 
-t = Tree(node_569)
-print(t)
-refine(graph_2, t)
-print(t)
-
-node_all = Node(['1','2','4','5','6','9'])
-
-t = Tree(node_all)
-print(t)
-refine(graph_2, t)
-print(t)
-refine(graph_2, t)
-print(t)
-refine(graph_2, t)
-print(t)
-
-graph = {}
-graph['1'] = {'4', '2'}
-graph['2'] = {'1', '3', '8'}
-graph['3'] = {'2', '6'}
-graph['4'] = {'7', '1'}
-graph['6'] = {'9', '3'}
-graph['7'] = {'4', '8'}
-graph['8'] = {'7', '9', '2'}
-graph['9'] = {'8', '6'}
-
-'''
-t = build_tree_decomposition_with_separator(peterson, set(), 3)
-print(t)
-'''
+build_tree_decomposition_from_refining(graph_2)
 
 graph_3 = {'5': {'2', '4', '6', '8'}, '2': {'5'}, '4': {'5', '1', '0'}, '1': {'4', '0'}, '0': {'4', '1'}, '6': {'5', 'a', 'c'},
            'a': {'6', 'b'}, 'b': {'a', 'c'}, 'c': {'b', '6'}, '8': {'5', '7', '9'},'7': {'8'},'9': {'8'}}
 
-t = Tree(Node(list(graph_3.keys())))
-print(t)
-refine(graph_3, t)
-print(t)
-refine(graph_3, t)
-print(t)
-refine(graph_3, t)
-print(t)
-refine(graph_3, t)
-print(t)
-refine(graph_3, t)
-print(t)
+build_tree_decomposition_from_refining(graph_3)
 
 peterson = {}
 peterson['0'] = {'1', '5', '6'}
@@ -490,19 +473,4 @@ peterson['9'] = {'3', '7', 'B'}
 peterson['A'] = {'4', '6', '8'}
 peterson['B'] = {'5', '7', '9'}
 
-t = Tree(Node(list(peterson.keys())))
-print(t)
-refine(peterson, t)
-print(t)
-refine(peterson, t)
-print(t)
-refine(peterson, t)
-print(t)
-refine(peterson, t)
-print(t)
-refine(peterson, t)
-print(t)
-refine(peterson, t)
-print(t)
-refine(peterson, t)
-print(t)
+build_tree_decomposition_from_refining(peterson)
