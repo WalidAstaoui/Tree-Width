@@ -174,3 +174,29 @@ def is_nice_tree(tree):
         return True
     
     return aux(tree.root)
+
+
+def generate_degree_bounded_graph(N, d):
+    gr = {}
+    for i in range(N):
+        gr[str(i)] = set()
+        if i:
+            gr[str(i)].add(str(i-1))
+            gr[str(i-1)].add(str(i))
+    
+    for i in range(N):
+        d_i = random.randint(1,d)
+        ls_j = list(range(N))
+        random.shuffle(ls_j)
+        for j in ls_j:
+            if j == i: continue
+            if len(gr[str(i)]) >= d_i:
+                break
+            if len(gr[str(j)]) == d:
+                continue
+            gr[str(i)].add(str(j))
+            gr[str(j)].add(str(i))
+            
+    return gr
+
+print(generate_degree_bounded_graph(10, 4))
