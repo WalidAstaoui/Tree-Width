@@ -297,15 +297,27 @@ def build_tree_decomposition_with_separator(grr, W, k):
 '''print(build_tree_decomposition_with_separator(peterson, set(), 3))'''
 
 def min_separator(gr):
-    min_size = oo
     sep = set()
-    for a in gr:
-        for b in gr:
-            if a < b:        
-                s, c, _ = find_size_and_cut_min_vertex_cut(gr, {a}, {b})
-                if s < min_size:
-                    min_size = s
-                    sep = c
+    min_size = oo
+    ls = list(gr.keys())
+    for i in range(len(gr)):
+        if len(gr[ls[i]]) < len(gr) - 1:
+            ls[0],ls[i] = ls[i],ls[0]
+            break
+    else:
+        return sep
+    i = 0
+    while i < min_size:
+        u = ls[i]
+        for j in range(i+1, len(gr)):
+            v = ls[j]
+            if v in gr[u]:
+                continue
+            s, c, _ = find_size_and_cut_min_vertex_cut(gr, {u}, {v})
+            if s < min_size:
+                min_size = s
+                sep = c
+        i += 1
     return sep
 
 def is_clique(gr, bag):
@@ -351,14 +363,14 @@ def refine(gr, t):
             bag_x = bag
     
     if len(bag_x) == 0:
-        print("Can t refine, bags are all cliques")
+        print("Can t refine, all bags are cliques")
         return False
     
     H = aux_graph(gr, t, bag_x)
     S = frozenset(min_separator(H))
     
     if len(S) == 0:
-        print("Can t refine, aux graph is clique")
+        print("Can t refine more, aux graph is clique")
         return False
     
     H_S = eliminate_set(H, S)
@@ -432,14 +444,15 @@ def initial_t(gr):
 
 def build_tree_decomposition_from_refining(gr):
     t = initial_t(gr)
-    print(tree_from_t(t))
+    print(tree_from_t(t), end = '')
     while(refine(gr, t)):
-        print(tree_from_t(t))
+        print(tree_from_t(t), end = '')
         
               
 graph_1 = {'1': {'2', '4'}, '2': {'1', '5'}, '4': {'1', '5'}, '5': {'2', '4', '6', '9'}, '6': {'5', '9'},
            '9': {'5', '6'}}
 
+print(min_separator(graph_1))
 build_tree_decomposition_from_refining(graph_1)
 
 graph_2 = {}
@@ -452,11 +465,13 @@ graph_2['7'] = {'4', '8'}
 graph_2['8'] = {'7', '9', '2'}
 graph_2['9'] = {'8', '6'}
 
+print(min_separator(graph_2))
 build_tree_decomposition_from_refining(graph_2)
 
 graph_3 = {'5': {'2', '4', '6', '8'}, '2': {'5'}, '4': {'5', '1', '0'}, '1': {'4', '0'}, '0': {'4', '1'}, '6': {'5', 'a', 'c'},
            'a': {'6', 'b'}, 'b': {'a', 'c'}, 'c': {'b', '6'}, '8': {'5', '7', '9'},'7': {'8'},'9': {'8'}}
 
+print(min_separator(graph_3))
 build_tree_decomposition_from_refining(graph_3)
 
 peterson = {}
@@ -473,4 +488,5 @@ peterson['9'] = {'3', '7', 'B'}
 peterson['A'] = {'4', '6', '8'}
 peterson['B'] = {'5', '7', '9'}
 
+print(min_separator(peterson))
 build_tree_decomposition_from_refining(peterson)
